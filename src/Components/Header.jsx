@@ -66,7 +66,7 @@ const Header = () => {
 
                     <div className="md:hidden flex items-center">
                         <button onClick={() => setOpen(!open)} className="text-gray-700 focus:outline-none">
-                            <span class="material-symbols-outlined">
+                            <span className="material-symbols-outlined">
                                 menu
                             </span>
                         </button>
