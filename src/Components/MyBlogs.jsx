@@ -1,6 +1,6 @@
 
-import { collection, deleteDoc, doc, getDocs } from 'firebase/firestore'
-import React, { useEffect, useState } from 'react'
+import { collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore'
+import React, { useEffect } from 'react'
 import { db } from '../firebase/firebase'
 import { useAuth } from '../context'
 import { Loader } from 'react-feather'
@@ -8,10 +8,29 @@ import EditBlog from './EditBlog'
 import { toast } from 'react-toastify'
 import { Outlet, useNavigate } from 'react-router-dom'
 import swal from "sweetalert2"
+import { useReducer } from 'react'
 
 const MyBlogs = () => {
-  const [posts, setPosts] = useState([])
-  const [myBlogLoad, setMyBlogLoad] = useState(false)
+
+  function redFn(prev , action){
+    switch (action.type) {
+      case "true":
+        return {...prev , blogLoad : true}
+      case "false" :
+        return {...prev , blogLoad : false}
+      case "post" :
+        return {...prev , posts : action.payload}
+      default:
+        return prev
+    }
+  }
+
+  const [state , dispach] = useReducer(redFn , {
+      posts : [],
+      blogLoad : false
+  })
+
+
   const { currentUser } = useAuth()
 
   const navigate = useNavigate()
@@ -20,15 +39,16 @@ const MyBlogs = () => {
 
   useEffect(() => {
     const getPosts = async () => {
-      setMyBlogLoad(true)
+      dispach({type : "true"})
       try {
-        let data = await getDocs(postCollection);
-        setPosts(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+        const q = query(postCollection , where("user.uid" , "==" , currentUser.uid))
+        let data = await getDocs(q);
+        dispach({type : "post" , payload : data.docs.map((doc) => ({ ...doc.data(), id: doc.id }))});
       } catch (error) {
         console.log(error.message)
       }
       finally {
-        setMyBlogLoad(false)
+        dispach({type : "false"})
       }
 
     }
@@ -57,7 +77,7 @@ const MyBlogs = () => {
     })
   }
 
-  if (myBlogLoad) {
+  if (state.blogLoad) {
     return (
       <div className="flex items-center justify-center h-screen gap-2 text-gray-600">
         <Loader className="animate-spin text-gray-600" size={24} />
@@ -71,11 +91,11 @@ const MyBlogs = () => {
     <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">My Blogs</h1>
 
-      {posts.length === 0 ? (
+      {state.posts.length === 0 ? (
         <p className="text-gray-600 text-center">No blogs found.</p>
       ) : (
         <div className="space-y-8">
-          {posts.map((blog) => (blog.title ?
+          {state.posts.map((blog) => (blog.title ?
 
             blog.user.email === currentUser?.email ?
 
@@ -109,7 +129,7 @@ const MyBlogs = () => {
                 </div>
 
               </div>
-              : ""
+              : ''
             :
             ""
           ))}
@@ -121,4 +141,6 @@ const MyBlogs = () => {
 }
 
 export default MyBlogs
+
+
 

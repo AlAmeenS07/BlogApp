@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from "react"
+import React, { createContext, useContext, useEffect } from "react"
 import { auth } from "../firebase/firebase"
 import { onAuthStateChanged } from "firebase/auth";
+import { useReducer } from "react";
 
 const AuthContext = createContext()
 
@@ -9,10 +10,31 @@ export const useAuth = ()=>{
 }
 
 export const AuthProvider = ({ children })=>{
-    
-    const [currentUser , setCurrentUser] = useState(null);
-    const [userLoggedIn , setUserLoggedIn] = useState(false)
-    const [loading , setLoading] = useState(true)
+
+    function redFn(prev , action){
+        switch (action.type) {
+            case "user":
+                return {...prev , currentUser : action.payload}
+            case "false":
+                return {...prev , loading : false}
+            case "loggedTrue" :
+                return {...prev , userLoggedIn : true}
+            case "setUser" :
+                return {...prev , currentUser : action.payload}
+            case "null":
+                return {...prev , currentUser : null}
+            case "loggedFalse" :
+                return {...prev , userLoggedIn : false}
+            default:
+                prev
+        }
+    }
+
+    const [state , dispach] = useReducer(redFn , {
+        currentUser : null,
+        userLoggedIn : false,
+        loading : true  
+    })
 
 
     useEffect(()=>{
@@ -22,24 +44,25 @@ export const AuthProvider = ({ children })=>{
 
     async function initializeUser(user) {
         if(user){
-            setCurrentUser({...user})
-            setUserLoggedIn(true)
+            dispach({type : "setUser" , payload : {...user}})
+            dispach({type : "loggedTrue"})
         }else{
-            setCurrentUser(null)
-            setUserLoggedIn(false)
+            dispach({type : "null"})
+            dispach({type : "loggedFalse"})
         }
-        setLoading(false)
+        dispach({type : "false"})
+
     }
 
     const value = {
-        currentUser,
-        userLoggedIn,
-        loading
+        currentUser : state.currentUser,
+        userLoggedIn : state.userLoggedIn,
+        loading : state.loading
     }
 
     return (
         <AuthContext.Provider value={value}>
-            { !loading && children}
+            { !state.loading && children}
         </AuthContext.Provider>
     )
 
